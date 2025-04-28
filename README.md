@@ -16,12 +16,13 @@ vals array      | 2,097,152 bytes
 total           | 3,276,864 bytes
 Overhead (struct+ctrl) | 4.00 %
 
-| Operation | SwissMap (ns) | [Abseil](https://github.com/abseil/abseil-cpp) (ns) | [Boost](https://github.com/boostorg/boost) (ns) | [stb_ds](https://github.com/nothings/stb/blob/master/stb_ds.h) (ns) | [CC](https://github.com/JacksonAllan/CC) (ns) |
-|---------|--------|---------|---------|-----------|------------|
-| Insert  | 975.05 | 2559.48 | 423.893 | 976.69    | 957.21     |
-| Lookup  | 663.13 | 575.484 | 91.8559 | 821.06    | 720.19     |
-| Iterate | 606.04 | 73.6445 | 30.3343 | 27,985.10 | 363,763.89 |
-| Delete  | 665.71 | 812.926 | 146.817 | 1,030.30  | 778.00     |
+| Operation | SwissMap (ns) | [Abseil](https://github.com/abseil/abseil-cpp) (ns) | [Boost](https://github.com/boostorg/boost) (ns) | [stb_ds](https://github.com/nothings/stb/blob/master/stb_ds.h) (ns) | [CC](https://github.com/JacksonAllan/CC) (ns) | [ska_flat_map](https://github.com/skarupke/flat_hash_map/blob/master/flat_hash_map.hpp) (ns) |
+|---------|--------|---------|---------|-----------|------------|---------|
+| Insert  | 876.86 | 2559.48 | 423.893 | 976.69    | 957.21     | 445.834 |
+| Lookup  | 663.13 | 575.484 | 91.8559 | 821.06    | 720.19     | 64.223  |
+| Iterate | 589.76 | 73.6445 | 30.3343 | 27,985.10 | 363,763.89 | 9.54452 |
+| Delete  | 643.72 | 812.926 | 146.817 | 1,030.30  | 778.00     | 71.8897 |
+
 
 I tries doing simd but it seems as if the compiler figures that out for me even using a scalar approach.
 
