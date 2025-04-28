@@ -16,8 +16,7 @@ vals array      | 2,097,152 bytes
 total           | 3,276,864 bytes
 Overhead (struct+ctrl) | 4.00 %
 
-| Operation | SwissMap (ns) | [Abseil:](https://github.com/abseil/abseil-cpp) (ns) | [Boost](https://github.com/boostorg/boost) (ns) | [stb_ds](https://github.com/nothings/stb/blob/master/stb_ds.h) (ns) | [CC](https://github.com/JacksonAllan/CC) |
- (ns)
+| Operation | SwissMap (ns) | [Abseil](https://github.com/abseil/abseil-cpp) (ns) | [Boost](https://github.com/boostorg/boost) (ns) | [stb_ds](https://github.com/nothings/stb/blob/master/stb_ds.h) (ns) | [CC](https://github.com/JacksonAllan/CC) (ns) |
 |---------|--------|---------|---------|-----------|------------|
 | Insert  | 975.05 | 2559.48 | 423.893 | 976.69    | 957.21     |
 | Lookup  | 663.13 | 575.484 | 91.8559 | 821.06    | 720.19     |
