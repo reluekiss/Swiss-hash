@@ -36,22 +36,18 @@ int main() {
     std::vector<std::string> keys;
     keys.reserve(NOPS);
 
-    // Prepare random keys
     for (int i = 0; i < NOPS; ++i)
       keys.push_back(random_string(10));
 
-    // Insert
     BENCHMARK("Insert", {
         m.emplace(keys[i], Value{ i, random_string(15) });
     });
 
-    // Lookup
     BENCHMARK("Lookup", {
         volatile auto& v = m[keys[i % keys.size()]];
         (void)v;
     });
 
-    // For-each
     BENCHMARK("Iterate", {
         size_t checksum = 0;
         for (auto& p : m) {

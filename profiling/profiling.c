@@ -2,11 +2,10 @@
 #include <time.h>
 
 #define SWISSMAP_IMPLEMENTATION
-#include "hash.h"
+#include "../hash.h"
 
 #define NOPS 100000
 
-/*—— Profiling ——*/
 typedef struct {
     int   num;
     char *string;

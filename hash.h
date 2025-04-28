@@ -138,10 +138,8 @@ static void sm_grow(SwissMap *m) {
                     size_t pos = (idx + j) & (m->cap - 1);
                     if (m->ctrl[pos] == EMPTY) {
                         m->ctrl[pos] = h2;
-                        memcpy((char*)m->keys + pos*m->key_size,
-                               k_src, m->key_size);
-                        memcpy((char*)m->vals + pos*m->val_size,
-                               v_src, m->val_size);
+                        memcpy((char*)m->keys + pos*m->key_size, k_src, m->key_size);
+                        memcpy((char*)m->vals + pos*m->val_size, v_src, m->val_size);
                         m->size++;
                         goto next;
                     }
@@ -158,7 +156,7 @@ static void sm_grow(SwissMap *m) {
 }
 
 void *sm_get(SwissMap *m, const void *key, int *inserted) {
-    if ((m->size + 1)*4 >= m->cap*3)
+    if ((m->size + 1)*5 >= m->cap*4)
         sm_grow(m);
 
     size_t h    = map_hash(key, m->key_size);
@@ -171,15 +169,12 @@ void *sm_get(SwissMap *m, const void *key, int *inserted) {
             uint8_t c  = m->ctrl[pos];
             if (c == EMPTY || c == DELETED) {
                 m->ctrl[pos] = h2;
-                memcpy((char*)m->keys + pos*m->key_size,
-                       key, m->key_size);
+                memcpy((char*)m->keys + pos*m->key_size, key, m->key_size);
                 m->size++;
                 *inserted = 1;
                 return (char*)m->vals + pos*m->val_size;
             }
-            if (c == h2 &&
-                memcmp((char*)m->keys + pos*m->key_size,
-                       key, m->key_size) == 0) {
+            if (c == h2 && memcmp((char*)m->keys + pos*m->key_size, key, m->key_size) == 0) {
                 *inserted = 0;
                 return (char*)m->vals + pos*m->val_size;
             }
@@ -198,9 +193,7 @@ int sm_delete(SwissMap *m, const void *key) {
             size_t pos = (idx + j) & (m->cap - 1);
             uint8_t c  = m->ctrl[pos];
             if (c == EMPTY) return -1;
-            if (c == h2 &&
-                memcmp((char*)m->keys + pos*m->key_size,
-                       key, m->key_size) == 0) {
+            if (c == h2 && memcmp((char*)m->keys + pos*m->key_size, key, m->key_size) == 0) {
                 m->ctrl[pos] = DELETED;
                 m->size--;
                 return 0;
