@@ -16,12 +16,11 @@ vals array      | 2,097,152 bytes
 total           | 3,276,864 bytes
 Overhead (struct+ctrl) | 4.00 %
 
-| Operation | SwissMap (ns) | [Abseil](https://github.com/abseil/abseil-cpp) (ns) | [Boost](https://github.com/boostorg/boost) (ns) | [stb_ds](https://github.com/nothings/stb/blob/master/stb_ds.h) (ns) | [CC](https://github.com/JacksonAllan/CC) (ns) | [ska_flat_map](https://github.com/skarupke/flat_hash_map/blob/master/flat_hash_map.hpp) (ns) |
-|---------|--------|---------|---------|-----------|------------|---------|
-| Insert  | 876.86 | 2559.48 | 423.893 | 976.69    | 957.21     | 445.834 |
-| Lookup  | 663.13 | 575.484 | 91.8559 | 821.06    | 720.19     | 64.223  |
-| Iterate | 589.76 | 73.6445 | 30.3343 | 27,985.10 | 363,763.89 | 9.54452 |
-| Delete  | 643.72 | 812.926 | 146.817 | 1,030.30  | 778.00     | 71.8897 |
+| Operation | SwissMap (ns) | [Abseil](https://github.com/abseil/abseil-cpp) (ns) | [Boost](https://github.com/boostorg/boost) (ns) | [stb_ds](https://github.com/nothings/stb/blob/master/stb_ds.h) (ns) | [CC](https://github.com/JacksonAllan/CC) (ns) | [ska_flat_map](https://github.com/skarupke/flat_hash_map/blob/master/flat_hash_map.hpp) (ns) | [cwisstable](https://github.com/google/cwisstable) (ns) |
+|---------|--------|---------|---------|-----------|------------|---------|---------|
+| Insert  | 876.86 | 2559.48 | 423.893 | 976.69    | 957.21     | 445.834 | 996.426 |
+| Lookup  | 663.13 | 575.484 | 91.8559 | 821.06    | 720.19     | 64.223  | 958.281 |
+| Iterate | 589.76 | 73.6445 | 30.3343 | 27,985.10 | 363,763.89 | 9.54452 | N/A     |
+| Delete  | 643.72 | 812.926 | 146.817 | 1,030.30  | 778.00     | 71.8897 | 947.221 |
 
-
-For stb and CC I think I may have done the iteration tests wrong but I can't seem to verify how/why.
+I'm not sure if my testing of the C libraries is bad but they are getting some pretty hairy results.
