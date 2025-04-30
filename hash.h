@@ -8,16 +8,18 @@
 typedef struct SwissMap SwissMap;
 
 /* create/free */
-SwissMap *sm_new(size_t init_cap, size_t key_size, size_t val_size);
-void      sm_free(SwissMap *m);
+static inline SwissMap *sm_new(size_t init_cap, size_t key_size, size_t val_size);
+static inline void      sm_free(SwissMap *m);
 
 /* get-or-insert: returns pointer to value slot; *inserted=1 if new */
-void *sm_get(SwissMap *m, const void *key, int *inserted);
+static inline void *sm_get(SwissMap *m, const void *key, int *inserted);
+
+// clear everything but keep the capacity – does NOT free anything
+static inline void  sm_clear(SwissMap *m);
 
 /* delete: returns 0 on success, –1 if not found */
-int   sm_delete(SwissMap *m, const void *key);
+static inline int   sm_delete(SwissMap *m, const void *key);
 
-/* user-facing macros */
 #define map(m, KeyT, ValT)                                   \
     typedef KeyT     m##_key_t;                              \
     typedef ValT     m##_val_t;                              \
@@ -34,6 +36,9 @@ int   sm_delete(SwissMap *m, const void *key);
         if (!m##_sm) return -1;                              \
         return sm_delete(m##_sm, &k);                        \
     }                                                        \
+    static inline void m##_clear(void) {                     \
+        if (m##_sm) sm_clear(m##_sm);                        \
+    }                                                        \
     static inline void m##_del(void) {                       \
         if (m##_sm) {                                        \
             sm_free(m##_sm);                                 \
@@ -41,10 +46,11 @@ int   sm_delete(SwissMap *m, const void *key);
         }                                                    \
     }
 
-#define put(m, k)   (*m##_acc(k))
-#define get(m, k)    m##_acc(k)
-#define erase(m, k)  m##_erase(k)
-#define delete(m)    m##_del()
+#define put(m, k)    (*m##_acc(k))
+#define get(m, k)     m##_acc(k)
+#define erase(m, k)   m##_erase(k)
+#define clear(m)      m##_clear()
+#define delete(m)     m##_del()
 
 #define for_each(m, k, v)                                                                 \
   for (size_t _i = 0; _i < m##_sm->cap; ++_i)                                             \
@@ -81,7 +87,7 @@ static inline uint32_t Match(uint8_t h, const uint8_t *ctrl) {
 }
 
 /*—— FNV-1a hash ——*/
-static size_t map_hash(const void *data, size_t len) {
+static inline size_t map_hash(const void *data, size_t len) {
     const uint8_t *p = data;
     size_t h = 14695981039346656037ULL;
     for (size_t i = 0; i < len; i++) {
@@ -91,7 +97,7 @@ static size_t map_hash(const void *data, size_t len) {
     return h;
 }
 
-static size_t next_pow2(size_t x) {
+static inline size_t next_pow2(size_t x) {
     if (x < 2) return 2;
     x--;
     for (int shift = 1; shift < (int)(8*sizeof(size_t)); shift <<= 1)
@@ -99,7 +105,7 @@ static size_t next_pow2(size_t x) {
     return x+1;
 }
 
-SwissMap *sm_new(size_t init_cap, size_t key_size, size_t val_size) {
+static inline SwissMap *sm_new(size_t init_cap, size_t key_size, size_t val_size) {
     SwissMap *m = malloc(sizeof *m);
     m->cap      = next_pow2(init_cap);
     m->size     = 0;
@@ -112,14 +118,14 @@ SwissMap *sm_new(size_t init_cap, size_t key_size, size_t val_size) {
     return m;
 }
 
-void sm_free(SwissMap *m) {
+static inline void sm_free(SwissMap *m) {
     free(m->ctrl);
     free(m->keys);
     free(m->vals);
     free(m);
 }
 
-static void sm_grow(SwissMap *m) {
+static inline void sm_grow(SwissMap *m) {
     size_t old_cap    = m->cap;
     uint8_t *old_ctrl = m->ctrl;
     void    *old_keys = m->keys;
@@ -163,7 +169,7 @@ static void sm_grow(SwissMap *m) {
     free(old_vals);
 }
 
-void *sm_get(SwissMap *m, const void *key, int *inserted) {
+static inline void *sm_get(SwissMap *m, const void *key, int *inserted) {
     if ((m->size + 1)*5 >= m->cap*4)
         sm_grow(m);
 
@@ -198,7 +204,7 @@ void *sm_get(SwissMap *m, const void *key, int *inserted) {
     }
 }
 
-int sm_delete(SwissMap *m, const void *key) {
+static inline int sm_delete(SwissMap *m, const void *key) {
     size_t h    = map_hash(key, m->key_size);
     uint8_t h2  = ((uint8_t)(h >> 56)) & 0x7F;
     size_t idx  = h & (m->cap - 1);
@@ -217,6 +223,11 @@ int sm_delete(SwissMap *m, const void *key) {
         }
         idx = (idx + GROUP_SIZE) & (m->cap - 1);
     }
+}
+
+static inline void sm_clear(SwissMap *m) {
+    m->size = 0;
+    memset(m->ctrl, EMPTY, m->cap + GROUP_SIZE);
 }
 
 #endif // SWISSMAP_IMPLEMENTATION
