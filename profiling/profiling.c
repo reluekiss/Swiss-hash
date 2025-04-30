@@ -1,10 +1,12 @@
+#include <stddef.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <time.h>
 
 #define SWISSMAP_IMPLEMENTATION
 #include "../hash.h"
 
-#define NOPS 100000
+#define NOPS 1000000
 
 typedef struct {
     int   num;
@@ -47,7 +49,7 @@ map(map1, char*, my_type_t);
 
 int main(void) {
     srand((unsigned)time(NULL));
-    char *inserted_keys[NOPS];
+    char *inserted_keys = malloc(NOPS);
     size_t inserted_count = 0;
     int batch_size = NOPS/10;
 
@@ -57,11 +59,11 @@ int main(void) {
         value.num = rand();
         value.string = random_string(15);
         put(map1, key) = value;
-        inserted_keys[inserted_count++] = key;
+        inserted_keys[inserted_count++] = *key;
     });
     
     BENCHMARK("Lookup", lookup, {
-        char *key = inserted_keys[rand() % inserted_count];
+        char *key = &inserted_keys[rand() % inserted_count];
         (void)*get(map1, key);
     });
 
@@ -77,7 +79,7 @@ int main(void) {
 
     BENCHMARK("Delete", delete, {
         size_t idx = rand() % inserted_count;
-        char *key  = inserted_keys[idx];
+        char *key  = &inserted_keys[idx];
         if (!erase(map1, key))
             inserted_keys[idx] = inserted_keys[--inserted_count];
     });
@@ -99,5 +101,6 @@ int main(void) {
     printf("Overhead (struct+ctrl): %.2f%% of total\n", overhead);
 
     delete(map1);
+    free(inserted_keys);
     return 0;
 }

@@ -60,20 +60,27 @@ int   sm_delete(SwissMap *m, const void *key);
 
 #include <stdlib.h>
 #include <string.h>
+#include <immintrin.h>
 
-#define GROUP_SIZE 8
+#define GROUP_SIZE 16 // TODO: Change to 16
 #define EMPTY      0x80u
 #define DELETED    0xFEu
 
 struct SwissMap {
     uint8_t *ctrl;     // [cap + GROUP_SIZE]
-    void    *keys;     // contiguous key_size×cap
+    void    *keys;     // contiguous key_size×cap // TODO: are the keys necerssary to keep track of if we have the controls and vals?
     void    *vals;     // contiguous val_size×cap
     size_t   cap, size;
     size_t   key_size, val_size;
 };
 
-/*—— FNV-1a 64-bit hash ——*/
+static inline uint32_t Match(uint8_t h, const uint8_t *ctrl) {
+    __m128i group = _mm_loadu_si128((const __m128i *)ctrl);
+    __m128i cmp   = _mm_cmpeq_epi8(_mm_set1_epi8(h), group);
+    return _mm_movemask_epi8(cmp);
+}
+
+/*—— FNV-1a hash ——*/
 static size_t map_hash(const void *data, size_t len) {
     const uint8_t *p = data;
     size_t h = 14695981039346656037ULL;
@@ -133,21 +140,22 @@ static void sm_grow(SwissMap *m) {
             size_t h    = map_hash(k_src, m->key_size);
             uint8_t h2  = ((uint8_t)(h >> 56)) & 0x7F;
             size_t idx  = h & (m->cap - 1);
-            for (;;) {
-                for (int j = 0; j < GROUP_SIZE; j++) {
-                    size_t pos = (idx + j) & (m->cap - 1);
-                    if (m->ctrl[pos] == EMPTY) {
-                        m->ctrl[pos] = h2;
-                        memcpy((char*)m->keys + pos*m->key_size, k_src, m->key_size);
-                        memcpy((char*)m->vals + pos*m->val_size, v_src, m->val_size);
-                        m->size++;
-                        goto next;
-                    }
+            uint32_t mask = Match(h2, &m->ctrl[idx]);
+            while (mask) {
+                int j = __builtin_ctz(mask);
+                size_t pos = (idx + j) & (m->cap - 1);
+                if (m->ctrl[pos] == EMPTY) {
+                    m->ctrl[pos] = h2;
+                    memcpy((char*)m->keys + pos*m->key_size, k_src, m->key_size);
+                    memcpy((char*)m->vals + pos*m->val_size, v_src, m->val_size);
+                    m->size++;
+                    goto next;
                 }
-                idx = (idx + GROUP_SIZE) & (m->cap - 1);
+                mask &= mask - 1;
             }
-        }
-    next:;
+            idx = (idx + GROUP_SIZE) & (m->cap - 1);
+            }
+        next:;
     }
 
     free(old_ctrl);
@@ -164,6 +172,17 @@ void *sm_get(SwissMap *m, const void *key, int *inserted) {
     size_t idx  = h & (m->cap - 1);
 
     for (;;) {
+        uint32_t mask = Match(h2, &m->ctrl[idx]);
+        while (mask) {
+            int j = __builtin_ctz(mask);
+            size_t pos = (idx + j) & (m->cap - 1);
+            if (memcmp((char*)m->keys + pos*m->key_size, key, m->key_size) == 0) {
+                *inserted = 0;
+                return (char*)m->vals + pos*m->val_size;
+            }
+            mask &= mask - 1;
+        }
+        // fallback insertion
         for (int j = 0; j < GROUP_SIZE; j++) {
             size_t pos = (idx + j) & (m->cap - 1);
             uint8_t c  = m->ctrl[pos];
@@ -172,10 +191,6 @@ void *sm_get(SwissMap *m, const void *key, int *inserted) {
                 memcpy((char*)m->keys + pos*m->key_size, key, m->key_size);
                 m->size++;
                 *inserted = 1;
-                return (char*)m->vals + pos*m->val_size;
-            }
-            if (c == h2 && memcmp((char*)m->keys + pos*m->key_size, key, m->key_size) == 0) {
-                *inserted = 0;
                 return (char*)m->vals + pos*m->val_size;
             }
         }
@@ -189,6 +204,7 @@ int sm_delete(SwissMap *m, const void *key) {
     size_t idx  = h & (m->cap - 1);
 
     for (;;) {
+        // TODO: Use match function here somehow
         for (int j = 0; j < GROUP_SIZE; j++) {
             size_t pos = (idx + j) & (m->cap - 1);
             uint8_t c  = m->ctrl[pos];

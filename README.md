@@ -24,6 +24,4 @@ Overhead (struct+ctrl) | 4.00 %
 | Delete  | 643.72 | 812.926 | 146.817 | 1,030.30  | 778.00     | 71.8897 |
 
 
-I tries doing simd but it seems as if the compiler figures that out for me even using a scalar approach.
-
 For stb and CC I think I may have done the iteration tests wrong but I can't seem to verify how/why.
