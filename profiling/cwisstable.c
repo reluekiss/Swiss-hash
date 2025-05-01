@@ -7,9 +7,6 @@
 #define CWISS_EXAMPLE_UNIFIED
 #include "cwisstable.h"
 
-/*────────────────────────────────────────────────────────────────
-   your policy from before: copy, dtor, hash, eq
-────────────────────────────────────────────────────────────────*/
 static inline void kCStrPolicy_copy(void *dst, const void *src) {
     typedef struct { const char *k; float v; } entry_t;
     const entry_t *e = src;
@@ -44,9 +41,6 @@ CWISS_DECLARE_NODE_MAP_POLICY(kCStrPolicy, const char*, float,
 
 CWISS_DECLARE_HASHMAP_WITH(MyCStrMap, const char*, float, kCStrPolicy);
 
-/*────────────────────────────────────────────────────────────────
-   benchmark harness
-────────────────────────────────────────────────────────────────*/
 #define NOPS       1000000
 #define BATCH_SIZE (NOPS/10)
 
@@ -91,7 +85,6 @@ int main(void) {
     char **inserted_keys = malloc(NOPS * sizeof(char*));
     size_t inserted_count = 0;
 
-    /*--------- INSERT ----------*/
     BENCHMARK("Insert", insert, {
         char *key = random_string(10);
         float  val = (float)rand() / RAND_MAX;
@@ -102,14 +95,12 @@ int main(void) {
         inserted_keys[inserted_count++] = key;
     });
 
-    /*--------- LOOKUP ----------*/
     BENCHMARK("Lookup", lookup, {
         const char *const k =
             inserted_keys[rand() % inserted_count];
         (void)MyCStrMap_find(&map, &k);
     });
 
-    /*--------- ITERATE ---------*/
     BENCHMARK("Iterate", iterate, {
         size_t checksum = 0;
         MyCStrMap_Iter it = MyCStrMap_iter(&map);
@@ -123,7 +114,6 @@ int main(void) {
         break;
     });
 
-    /*--------- DELETE ----------*/
     BENCHMARK("Delete", delete, {
         size_t idx = rand() % inserted_count;
         const char *const k = inserted_keys[idx];
@@ -134,7 +124,6 @@ int main(void) {
 
     printf("Final map size: %zu\n\n", MyCStrMap_size(&map));
 
-    /* cleanup the rest of the keys */
     for (size_t i = 0; i < inserted_count; ++i)
         free(inserted_keys[i]);
     free(inserted_keys);
