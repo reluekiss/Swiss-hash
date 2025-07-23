@@ -2,7 +2,6 @@
 #include <stddef.h>
 #include <string.h>
 
-/* pick vector backend unless scalar is forced */
 #ifndef XXH3_USE_SCALAR
 # if defined(__AVX2__)
 #   include <immintrin.h>
@@ -13,7 +12,6 @@
 # endif
 #endif
 
-/*— helpers —*/
 static inline uint64_t read64(const void *p) {
     uint64_t v; memcpy(&v, p, 8); return v;
 }
@@ -21,7 +19,6 @@ static inline uint64_t rotl64(uint64_t x, int r) {
     return (x << r) | (x >> (64 - r));
 }
 
-/*— default 192-byte secret —*/
 static const uint8_t XXH3_kSecret[192] = {
     0xb8,0xfe,0x6c,0x39,0x23,0xa4,0x4b,0xbe,0x7c,0x01,0x81,0x2c,0xf7,0x21,0xad,
     0x1c,0xde,0xd4,0x6d,0xe9,0x83,0x90,0x97,0xdb,0x72,0x40,0xa4,0xa4,0xb7,0xb3,
@@ -38,7 +35,6 @@ static const uint8_t XXH3_kSecret[192] = {
     0x95,0x16,0x04,0x28,0xaf,0xd7,0xfb,0xca,0xbb,0x4b,0x40,0x7e
 };
 
-/*— stripe‐accumulator: 64‐byte -> eight 64‐bit lanes —*/
 #if defined(XXH3_USE_AVX2)
 
 static void accumulate512(uint64_t acc[8], const uint8_t *in, const uint8_t *sec) {
@@ -79,7 +75,7 @@ static void accumulate512(uint64_t acc[8], const uint8_t *in, const uint8_t *sec
     }
 }
 
-#else  /* scalar */
+#else
 
 static void accumulate512(uint64_t acc[8], const uint8_t *in, const uint8_t *sec) {
     for (int i = 0; i < 8; i++) {

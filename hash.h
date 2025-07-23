@@ -4,7 +4,6 @@
 #include <stddef.h>
 #include <stdint.h>
 
-/* opaque handle */
 typedef void*(*sm_alloc_fn)(void* ctx, uint64_t n);
 typedef void(*sm_free_fn)(void* ctx, void* p);
 typedef uint64_t(*sm_hash_fn)(const void *data, uint64_t len);
@@ -16,7 +15,6 @@ typedef struct {
     sm_hash_fn hash;
 } sm_allocator_t;
 
-/* core functions now take sizes as parameters */
 sm_allocator_t sm_mmap_allocator(void);
 void *sm_new(uint64_t init_cap, uint64_t key_size, uint64_t val_size, sm_allocator_t allocs);
 void sm_free(void *m, sm_allocator_t allocs);
