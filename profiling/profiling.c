@@ -3,8 +3,9 @@
 #include <stdlib.h>
 #include <time.h>
 
-#define SWISSMAP_IMPLEMENTATION
 #include "../hash.h"
+
+#include "../xxhash3.h"
 
 #define NOPS 100000000
 #define STEPS 10
@@ -49,6 +50,10 @@ char* random_string(size_t length) {
     return str;
 }
 
+sm_allocator_t newhash(sm_allocator_t a) {
+    a.hash = XXH3_64bits;
+    return a;
+}
 map(map1, char*, my_type_t, sm_mmap_allocator());
 
 static da_charp_t keys = {0};

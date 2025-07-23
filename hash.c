@@ -26,8 +26,7 @@ typedef struct {
     uint64_t lgcap;
 } swiss_map_generic_t;
 
-/*—— FNV-1a 64-bit hash ——*/
-static uint64_t map_hash(const void *data, uint64_t len) {
+static uint64_t fnv1a(const void *data, uint64_t len) {
     const uint8_t *p = data;
     uint64_t h = 14695981039346656037ULL;
     for (uint64_t i = 0; i < len; i++) {
@@ -46,9 +45,8 @@ static uint64_t next_pow2(uint64_t x) {
     return x + 1;
 }
 
-static inline uint64_t index_for(uint64_t h, uint64_t cap) {
-    unsigned lg = __builtin_ctzll(cap);
-    return (h * 11400714819323198485ull) >> (64 - lg);
+static inline uint64_t index_for(uint64_t h, uint64_t lgcap) {
+    return (h * 11400714819323198485ull) >> (64 - lgcap);
 }
 
 static void *mmap_alloc(void *ctx, uint64_t n) {
@@ -76,6 +74,7 @@ sm_allocator_t sm_mmap_allocator(void) {
     a.ctx = NULL;
     a.alloc = mmap_alloc;
     a.free = mmap_free;
+    a.hash = fnv1a;
     return a;
 }
 
@@ -94,6 +93,8 @@ void *sm_new(uint64_t init_cap, uint64_t key_size, uint64_t val_size, sm_allocat
         allocs.alloc = sm_alloc;
         allocs.free = sm_unalloc;
     }
+    if (allocs.hash == NULL) 
+        allocs.hash = fnv1a;
 
     swiss_map_generic_t *m = allocs.alloc(allocs.ctx, sizeof(*m));
     m->alloc = allocs;
@@ -118,13 +119,13 @@ void sm_free(void *map, sm_allocator_t allocs) {
 #ifdef __AVX2__
 static inline uint32_t match(uint8_t h, const uint8_t *ctrl) {
     __m256i group = _mm256_loadu_si256((const __m256i*)ctrl);
-    __m256i cmp   = _mm256_cmpeq_epi8(_mm256_set1_epi8(h), group);
+    __m256i cmp = _mm256_cmpeq_epi8(_mm256_set1_epi8(h), group);
     return _mm256_movemask_epi8(cmp);
 }
 #else
 static inline uint32_t match(uint8_t h, const uint8_t *ctrl) {
     __m128i group = _mm_loadu_si128((const __m128i*)ctrl);
-    __m128i cmp   = _mm_cmpeq_epi8(_mm_set1_epi8(h), group);
+    __m128i cmp = _mm_cmpeq_epi8(_mm_set1_epi8(h), group);
     return _mm_movemask_epi8(cmp);
 }
 #endif
@@ -136,6 +137,7 @@ static void sm_grow(swiss_map_generic_t *m, uint64_t key_size, uint64_t val_size
     void *old_vals = m->vals;
 
     m->cap *= 2;
+    m->lgcap = __builtin_ctzll(m->cap);
     m->size = 0;
     m->ctrl = m->alloc.alloc(m->alloc.ctx, m->cap + GROUP_SIZE);
     memset(m->ctrl, EMPTY, m->cap + GROUP_SIZE);
@@ -148,9 +150,9 @@ static void sm_grow(swiss_map_generic_t *m, uint64_t key_size, uint64_t val_size
         if (c != EMPTY && c != DELETED) {
             void *k_src = (char *)old_keys + i * key_size;
             void *v_src = (char *)old_vals + i * val_size;
-            uint64_t h = map_hash(k_src, key_size);
+            uint64_t h = m->alloc.hash(k_src, key_size);
             uint8_t h2 = ((uint8_t)(h >> 56)) & 0x7F;
-            uint64_t idx = index_for(h, m->cap);
+            uint64_t idx = index_for(h, m->lgcap);
             uint32_t mask = match(h2, &m->ctrl[idx]);
             while (mask) {
                 int j = __builtin_ctz(mask);
@@ -178,9 +180,9 @@ void *sm_get(void *map, const void *key, int *inserted, uint64_t key_size, uint6
     if ((m->size + 1) * 5 >= m->cap * 4)
         sm_grow(m, key_size, val_size);
 
-    uint64_t h = map_hash(key, key_size);
+    uint64_t h = m->alloc.hash(key, key_size);
     uint8_t h2 = ((uint8_t)(h >> 56)) & 0x7F;
-    uint64_t idx = index_for(h, m->cap); 
+    uint64_t idx = index_for(h, m->lgcap); 
     for (;; idx = (idx + GROUP_SIZE) & (m->cap-1)) {
         uint8_t *ctrl = m->ctrl + idx;
         __builtin_prefetch(ctrl + GROUP_SIZE, 0, 1);
@@ -208,9 +210,9 @@ void *sm_get(void *map, const void *key, int *inserted, uint64_t key_size, uint6
 
 int sm_delete(void *map, const void *key, uint64_t key_size, uint64_t val_size) {
     swiss_map_generic_t *m = (swiss_map_generic_t*)map;
-    uint64_t h = map_hash(key, key_size);
+    uint64_t h = m->alloc.hash(key, key_size);
     uint8_t h2 = ((uint8_t)(h >> 56)) & 0x7F;
-    uint64_t idx = index_for(h, m->cap);
+    uint64_t idx = index_for(h, m->lgcap);
     for (;;) {
         uint32_t match_mask = match(h2, &m->ctrl[idx]);
         while (match_mask) {

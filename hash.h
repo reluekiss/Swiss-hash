@@ -7,11 +7,13 @@
 /* opaque handle */
 typedef void*(*sm_alloc_fn)(void* ctx, uint64_t n);
 typedef void(*sm_free_fn)(void* ctx, void* p);
+typedef uint64_t(*sm_hash_fn)(const void *data, uint64_t len);
 
 typedef struct {
     void* ctx;
     sm_alloc_fn alloc;
     sm_free_fn free;
+    sm_hash_fn hash;
 } sm_allocator_t;
 
 /* core functions now take sizes as parameters */
