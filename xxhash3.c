@@ -61,7 +61,6 @@ static void accumulate512(uint64_t acc[8], const uint8_t *in, const uint8_t *sec
     __m128i *xacc    = (__m128i*)acc;
     const __m128i *xinp = (const __m128i*)in;
     const __m128i *xsec = (const __m128i*)sec;
-    __m128i prime32 = _mm_set1_epi32(0x9E3779B1U);
 
     for (int i = 0; i < 4; i++) {
         __m128i data = _mm_loadu_si128(xinp + i);
@@ -134,7 +133,6 @@ static uint64_t xxh3_len_17to128(const uint8_t *p, uint64_t len) {
 /*— regime-3: 129–240 bytes —*/
 static uint64_t xxh3_len_129to240(const uint8_t *p, uint64_t len) {
     uint64_t acc = len * 0x9E3779B185EBCA87ULL;
-    int rounds = (int)len / 32;
     for (int i = 0; i < 4; i++) {
         const uint8_t *a = p + 32*i;
         const uint8_t *b = a + 16;

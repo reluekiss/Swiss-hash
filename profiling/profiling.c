@@ -7,7 +7,7 @@
 
 #include "../xxhash3.h"
 
-#define NOPS 100000000
+#define NOPS 1000000
 #define STEPS 10
 
 #define DA_INIT_CAP 16
@@ -28,23 +28,23 @@
 
 typedef struct {
     int num;
-    char *string;
+    char string[1016];
 } my_type_t;
 
 typedef struct {
     char **items;
-    size_t count, capacity;
+    uint64_t count, capacity;
 } da_charp_t;
 
 typedef struct {
     my_type_t *items;
-    size_t count, capacity;
+    uint64_t count, capacity;
 } da_val_t;
 
-char* random_string(size_t length) {
+char* random_string(uint64_t length) {
     static const char charset[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     char* str = malloc(length + 1);
-    for (size_t i = 0; i < length; i++)
+    for (uint64_t i = 0; i < length; i++)
         str[i] = charset[rand() % (sizeof charset - 1)];
     str[length] = '\0';
     return str;
@@ -64,7 +64,7 @@ static void prepare_data(void) {
         da_append(&keys, random_string(10));
         da_append(&vals, (my_type_t){
             .num    = rand(),
-            .string = random_string(15),
+            .string = *random_string(1015),
         });
     }
 }
@@ -79,7 +79,7 @@ int main(void) {
     srand((unsigned)time(NULL));
     prepare_data();
   
-    size_t step = NOPS/STEPS;
+    uint64_t step = NOPS/STEPS;
     struct timespec t0, t1;
     clock_gettime(CLOCK_MONOTONIC, &t0);
     for (int i = 0; i < NOPS; i++) {
@@ -87,7 +87,7 @@ int main(void) {
         if ((i+1) % step == 0) {
             clock_gettime(CLOCK_MONOTONIC, &t1);
             long ns = ns_diff(&t0, &t1);
-            printf("Insert avg @ %6zu ops: %.2f ns/op\n", i+1, (double)ns/(i+1));
+            printf("Insert avg @ %6u ops: %.2f ns/op\n", i+1, (double)ns/(i+1));
         }
     }
   
@@ -97,21 +97,21 @@ int main(void) {
         if ((i+1) % step == 0) {
             clock_gettime(CLOCK_MONOTONIC, &t1);
             long ns = ns_diff(&t0, &t1);
-            printf("Lookup avg @ %6zu ops: %.2f ns/op\n", i+1, (double)ns/(i+1));
+            printf("Lookup avg @ %6u ops: %.2f ns/op\n", i+1, (double)ns/(i+1));
         }
     }
 
     clock_gettime(CLOCK_MONOTONIC, &t0);
     for (int i = 0; i < NOPS; i++) {
-        size_t checksum = 0;
+        uint64_t checksum = 0;
         for_each(map1, i) {
             checksum += map1->vals[i].num;
         }
-       volatile size_t sink = checksum;
+       volatile uint64_t sink = checksum;
         if ((i+1) % step == 0) {
             clock_gettime(CLOCK_MONOTONIC, &t1);
             long ns = ns_diff(&t0, &t1);
-            printf("Iterate avg @ %6zu ops: %.2f ns/op\n", i+1, (double)ns/(i+1));
+            printf("Iterate avg @ %6u ops: %.2f ns/op\n", i+1, (double)ns/(i+1));
         }
         break;
     }
@@ -122,15 +122,15 @@ int main(void) {
         if ((i+1) % step == 0) {
             clock_gettime(CLOCK_MONOTONIC, &t1);
             long ns = ns_diff(&t0, &t1);
-            printf("Deletion avg @ %6zu ops: %.2f ns/op\n", i+1, (double)ns/(i+1));
+            printf("Deletion avg @ %6u ops: %.2f ns/op\n", i+1, (double)ns/(i+1));
         }
     }
 
-    size_t ctrl_mem = map1->cap + 32;
-    size_t keys_mem = map1->cap * sizeof(map1->keys);
-    size_t vals_mem = map1->cap * sizeof(map1->vals);
-    size_t struct_mem = sizeof(*map1);
-    size_t total_mem = struct_mem + ctrl_mem + keys_mem + vals_mem;
+    uint64_t ctrl_mem = map1->cap + 32;
+    uint64_t keys_mem = map1->cap * sizeof(map1->keys);
+    uint64_t vals_mem = map1->cap * sizeof(map1->vals[0]);
+    uint64_t struct_mem = sizeof(*map1);
+    uint64_t total_mem = struct_mem + ctrl_mem + keys_mem + vals_mem;
     double overhead = (double)(struct_mem + ctrl_mem) / total_mem * 100.0;
 
     printf("Memory usage:\n");
