@@ -148,27 +148,24 @@ static void sm_grow(swiss_map_generic_t *m, uint64_t key_size, uint64_t val_size
     for (uint64_t i = 0; i < old_cap; i++) {
         uint8_t c = old_ctrl[i];
         if (c != EMPTY && c != DELETED) {
-            void *k_src = (char *)old_keys + i * key_size;
-            void *v_src = (char *)old_vals + i * val_size;
-            uint64_t h = m->alloc.hash(k_src, key_size);
+            void *k_src = (char*)old_keys + i * key_size;
+            void *v_src = (char*)old_vals + i * val_size;
+            uint64_t h  = m->alloc.hash(k_src, key_size);
             uint8_t h2 = ((uint8_t)(h >> 56)) & 0x7F;
             uint64_t idx = index_for(h, m->lgcap);
-            uint32_t mask = match(h2, &m->ctrl[idx]);
-            while (mask) {
-                int j = __builtin_ctz(mask);
-                uint64_t pos = (idx + j) & (m->cap - 1);
-                if (m->ctrl[pos] == EMPTY) {
+            for (;;idx = (idx + GROUP_SIZE) & (m->cap - 1)) {
+                uint32_t mask = match(EMPTY, &m->ctrl[idx]);
+                if (mask) {
+                    int j = __builtin_ctz(mask);
+                    uint64_t pos = (idx + j) & (m->cap - 1);
                     m->ctrl[pos] = h2;
                     memcpy((char*)m->keys + pos * key_size, k_src, key_size);
                     memcpy((char*)m->vals + pos * val_size, v_src, val_size);
                     m->size++;
-                    goto next;
+                    break;
                 }
-                mask &= mask - 1;
             }
-            idx = (idx + GROUP_SIZE) & (m->cap - 1);
-            }
-        next:;
+        }
     }
     m->alloc.free(m->alloc.ctx, old_ctrl);
     m->alloc.free(m->alloc.ctx, old_keys);

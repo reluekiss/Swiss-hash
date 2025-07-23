@@ -3,9 +3,9 @@
 #include <stdlib.h>
 #include <time.h>
 
-#include "../hash.h"
+#include "hash.h"
 
-#include "../xxhash3.h"
+#include "xxhash3.h"
 
 #define NOPS 1000000
 #define STEPS 10
@@ -28,7 +28,7 @@
 
 typedef struct {
     int num;
-    char string[1016];
+    char* string;
 } my_type_t;
 
 typedef struct {
@@ -40,6 +40,14 @@ typedef struct {
     my_type_t *items;
     uint64_t count, capacity;
 } da_val_t;
+
+static inline uint32_t xorshift32(uint32_t *x) {
+    uint32_t y = *x;
+    y ^= y << 13;
+    y ^= y >> 17;
+    y ^= y <<  5;
+    return *x = y;
+}
 
 char* random_string(uint64_t length) {
     static const char charset[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -64,7 +72,7 @@ static void prepare_data(void) {
         da_append(&keys, random_string(10));
         da_append(&vals, (my_type_t){
             .num    = rand(),
-            .string = *random_string(1015),
+            .string = random_string(1015),
         });
     }
 }
@@ -92,8 +100,10 @@ int main(void) {
     }
   
     clock_gettime(CLOCK_MONOTONIC, &t0);
+    uint32_t state = 123456789;
     for (int i = 0; i < NOPS; i++) {
-      (void)*get(map1, keys.items[rand()%NOPS]);
+        uint32_t r = xorshift32(&state) & (NOPS - 1);
+        (void)*get(map1, keys.items[r]);
         if ((i+1) % step == 0) {
             clock_gettime(CLOCK_MONOTONIC, &t1);
             long ns = ns_diff(&t0, &t1);
@@ -108,12 +118,12 @@ int main(void) {
             checksum += map1->vals[i].num;
         }
        volatile uint64_t sink = checksum;
-        if ((i+1) % step == 0) {
+        if ((i+1) % 10000 == 0) {
             clock_gettime(CLOCK_MONOTONIC, &t1);
             long ns = ns_diff(&t0, &t1);
             printf("Iterate avg @ %6u ops: %.2f ns/op\n", i+1, (double)ns/(i+1));
+            break;
         }
-        break;
     }
   
     clock_gettime(CLOCK_MONOTONIC, &t0);

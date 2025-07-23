@@ -80,8 +80,7 @@ int main() {
       (void)v;
     }
     auto t1 = std::chrono::high_resolution_clock::now();
-    double avg =
-      std::chrono::duration<double, std::nano>(t1 - t0).count() / NOPS;
+    double avg = std::chrono::duration<double, std::nano>(t1 - t0).count() / NOPS;
     std::cout << "Lookup avg: " << avg << " ns/op\n";
   }
 

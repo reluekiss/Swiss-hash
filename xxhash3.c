@@ -41,7 +41,6 @@ static void accumulate512(uint64_t acc[8], const uint8_t *in, const uint8_t *sec
     __m256i *xacc    = (__m256i*)acc;
     const __m256i *xinp = (const __m256i*)in;
     const __m256i *xsec = (const __m256i*)sec;
-    __m256i prime32 = _mm256_set1_epi32((int)0x9E3779B1U);
 
     for (int i = 0; i < 2; i++) {
         __m256i data = _mm256_loadu_si256(xinp + i);
