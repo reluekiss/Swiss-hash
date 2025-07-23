@@ -1,18 +1,44 @@
-#include <stddef.h>
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <time.h>
 
 #define SWISSMAP_IMPLEMENTATION
 #include "../hash.h"
 
-#define NOPS 100000
+#define NOPS 100000000
+#define STEPS 10
+
+#define DA_INIT_CAP 16
+
+#define da_append(da, ...)                                                     \
+  do {                                                                          \
+    if ((da)->count >= (da)->capacity) {                                        \
+      (da)->capacity = (da)->capacity == 0                                     \
+                        ? DA_INIT_CAP                                         \
+                        : (da)->capacity * 2;                                 \
+      (da)->items = realloc(                                                   \
+        (da)->items,                                                           \
+        (da)->capacity * sizeof(*(da)->items));                               \
+      assert((da)->items != NULL && "Out of memory");                         \
+    }                                                                           \
+    (da)->items[(da)->count++] = (__VA_ARGS__);                                \
+  } while (0)
 
 typedef struct {
-    int   num;
+    int num;
     char *string;
 } my_type_t;
+
+typedef struct {
+    char **items;
+    size_t count, capacity;
+} da_charp_t;
+
+typedef struct {
+    my_type_t *items;
+    size_t count, capacity;
+} da_val_t;
 
 char* random_string(size_t length) {
     static const char charset[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -23,141 +49,93 @@ char* random_string(size_t length) {
     return str;
 }
 
-map(map1, char*, my_type_t);
+map(map1, char*, my_type_t, sm_mmap_allocator());
 
-#define BENCHMARK(LABEL, VAR, CODE)                                    \
-    do {                                                               \
-        printf("Starting " LABEL "s\n");                               \
-        clock_t diff = 0, batch_diff = 0;                              \
-        for (int op = 0; op < NOPS; op++) {                            \
-            clock_t start = clock(); CODE; clock_t end = clock();      \
-            diff       += end - start;                                 \
-            batch_diff += end - start;                                 \
-            if ((op+1) % batch_size == 0) {                            \
-                printf(                                                \
-                  LABEL " avg @ size %zu (ops %4d–%4d): %.3f ns\n",    \
-                  map1_sm->size,                                       \
-                  op-(batch_size-1), op,                               \
-                  ((double)batch_diff / CLOCKS_PER_SEC / batch_size)*1e9 \
-                );                                                     \
-                batch_diff = 0;                                        \
-            }                                                          \
-        }                                                              \
-        double avg_##VAR = ((double)diff / CLOCKS_PER_SEC / NOPS) * 1e9; \
-        printf("Average " LABEL " time per op: %.6f ns\n",             \
-               avg_##VAR);                                            \
-    } while (0)
+static da_charp_t keys = {0};
+static da_val_t vals = {0};
+
+static void prepare_data(void) {
+    for (int i = 0; i < NOPS; i++) {
+        da_append(&keys, random_string(10));
+        da_append(&vals, (my_type_t){
+            .num    = rand(),
+            .string = random_string(15),
+        });
+    }
+}
+
+static long ns_diff(const struct timespec *a,
+                    const struct timespec *b) {
+  return (b->tv_sec - a->tv_sec)*1000000000L
+       + (b->tv_nsec - a->tv_nsec);
+}
 
 int main(void) {
     srand((unsigned)time(NULL));
-    char **inserted_keys = malloc(NOPS * sizeof(char*));
-    size_t inserted_count = 0;
-    int batch_size = NOPS/10;
+    prepare_data();
+  
+    size_t step = NOPS/STEPS;
+    struct timespec t0, t1;
+    clock_gettime(CLOCK_MONOTONIC, &t0);
+    for (int i = 0; i < NOPS; i++) {
+        put(map1, keys.items[i], vals.items[i]);
+        if ((i+1) % step == 0) {
+            clock_gettime(CLOCK_MONOTONIC, &t1);
+            long ns = ns_diff(&t0, &t1);
+            printf("Insert avg @ %6zu ops: %.2f ns/op\n", i+1, (double)ns/(i+1));
+        }
+    }
+  
+    clock_gettime(CLOCK_MONOTONIC, &t0);
+    for (int i = 0; i < NOPS; i++) {
+      (void)*get(map1, keys.items[rand()%NOPS]);
+        if ((i+1) % step == 0) {
+            clock_gettime(CLOCK_MONOTONIC, &t1);
+            long ns = ns_diff(&t0, &t1);
+            printf("Lookup avg @ %6zu ops: %.2f ns/op\n", i+1, (double)ns/(i+1));
+        }
+    }
 
-    printf("Starting Insert\n");                               
-    clock_t diff = 0, batch_diff = 0;                              
-    for (int op = 0; op < NOPS; op++) {                            
-        char *key = random_string(10);
-        my_type_t value = {0};
-        value.num = rand();
-        value.string = random_string(15);
-        clock_t start = clock(); 
-        put(map1, key) = value;
-        clock_t end = clock();      
-        inserted_keys[inserted_count++] = key;
-        diff       += end - start;                                 
-        batch_diff += end - start;                                 
-        if ((op+1) % batch_size == 0) {                            
-            printf(                                                
-              "Insert avg @ size %zu (ops %4d–%4d): %.3f \n",    
-              map1_sm->size,                                       
-              op-(batch_size-1), op,                               
-              ((double)batch_diff / CLOCKS_PER_SEC / batch_size)*1e9 
-            );                                                     
-            batch_diff = 0;                                        
-        }                                                          
-    }                                                              
-    double avg_insert = ((double)diff / CLOCKS_PER_SEC / NOPS) * 1e9; 
-    printf("Average Insert time per op: %.6f \n", avg_insert);                                            
-    
-    printf("Starting Lookup\n");                               
-    diff = 0, batch_diff = 0;                              
-    for (int op = 0; op < NOPS; op++) {                            
-        char *key = inserted_keys[rand() % inserted_count];
-        clock_t start = clock(); 
-        (void)*get(map1, key);
-        clock_t end = clock();      
-        diff       += end - start;                                 
-        batch_diff += end - start;                                 
-        if ((op+1) % batch_size == 0) {                            
-            printf(                                                
-              "Lookup avg @ size %zu (ops %4d–%4d): %.3f \n",    
-              map1_sm->size,                                       
-              op-(batch_size-1), op,                               
-              ((double)batch_diff / CLOCKS_PER_SEC / batch_size)*1e9 
-            );                                                     
-            batch_diff = 0;                                        
-        }                                                          
-    }                                                              
-    double avg_lookup = ((double)diff / CLOCKS_PER_SEC / NOPS) * 1e9; 
-    printf("Average Lookup time per op: %.6f \n", avg_lookup);                                            
-
-    BENCHMARK("Iterate", iterate, {
+    clock_gettime(CLOCK_MONOTONIC, &t0);
+    for (int i = 0; i < NOPS; i++) {
         size_t checksum = 0;
-        for_each(map1, k, v) {
-          (void)k;
-          checksum += v->num;
+        for_each(map1, i) {
+            checksum += map1->vals[i].num;
         }
-        size_t sink = checksum;
-        (void)sink;
-    });   
-
-    printf("Starting Deletes\n");                               
-    diff = 0, batch_diff = 0;                              
-    for (int op = 0; op < NOPS; op++) {                            
-        size_t idx = rand() % inserted_count;
-        char *key = inserted_keys[idx];
-        clock_t start = clock(); 
-        if (erase(map1, key)) {
-            free(key);
-            inserted_keys[idx] = inserted_keys[--inserted_count];
+       volatile size_t sink = checksum;
+        if ((i+1) % step == 0) {
+            clock_gettime(CLOCK_MONOTONIC, &t1);
+            long ns = ns_diff(&t0, &t1);
+            printf("Iterate avg @ %6zu ops: %.2f ns/op\n", i+1, (double)ns/(i+1));
         }
-        clock_t end = clock();      
-        diff       += end - start;                                 
-        batch_diff += end - start;                                 
-        if ((op+1) % batch_size == 0) {                            
-            printf(                                                
-              "Delete avg @ size %zu (ops %4d–%4d): %.3f \n",    
-              map1_sm->size,                                       
-              op-(batch_size-1), op,                               
-              ((double)batch_diff / CLOCKS_PER_SEC / batch_size)*1e9 
-            );                                                     
-            batch_diff = 0;                                        
-        }                                                          
-    }                                                              
-    double avg_del = ((double)diff / CLOCKS_PER_SEC / NOPS) * 1e9; 
-    printf("Average Delete time per op: %.6f \n", avg_del);                                            
+        break;
+    }
+  
+    clock_gettime(CLOCK_MONOTONIC, &t0);
+    for (int i = 0; i < NOPS; i++) {
+      erase(map1, keys.items[i]);
+        if ((i+1) % step == 0) {
+            clock_gettime(CLOCK_MONOTONIC, &t1);
+            long ns = ns_diff(&t0, &t1);
+            printf("Deletion avg @ %6zu ops: %.2f ns/op\n", i+1, (double)ns/(i+1));
+        }
+    }
 
-    SwissMap *m = map1_sm;
-    size_t ctrl_mem   = m->cap + GROUP_SIZE;
-    size_t keys_mem   = m->cap * m->key_size;
-    size_t vals_mem   = m->cap * m->val_size;
-    size_t struct_mem = sizeof(*m);
-    size_t total_mem  = struct_mem + ctrl_mem + keys_mem + vals_mem;
-    double overhead   = (double)(struct_mem + ctrl_mem) / total_mem * 100.0;
+    size_t ctrl_mem = map1->cap + 32;
+    size_t keys_mem = map1->cap * sizeof(map1->keys);
+    size_t vals_mem = map1->cap * sizeof(map1->vals);
+    size_t struct_mem = sizeof(*map1);
+    size_t total_mem = struct_mem + ctrl_mem + keys_mem + vals_mem;
+    double overhead = (double)(struct_mem + ctrl_mem) / total_mem * 100.0;
 
     printf("Memory usage:\n");
-    printf("  SwissMap struct:       %zu bytes\n", struct_mem);
-    printf("  control array:         %zu bytes\n", ctrl_mem);
-    printf("  keys array:            %zu bytes\n", keys_mem);
-    printf("  vals array:            %zu bytes\n", vals_mem);
-    printf("  total:                 %zu bytes\n", total_mem);
+    printf("  SwissMap struct:  %zu bytes\n", struct_mem);
+    printf("  control array:    %zu bytes\n", ctrl_mem);
+    printf("  keys.items array: %zu bytes\n", keys_mem);
+    printf("  vals.items array: %zu bytes\n", vals_mem);
+    printf("  total:            %zu bytes\n", total_mem);
     printf("Overhead (struct+ctrl): %.2f%% of total\n", overhead);
 
-    for (size_t i = 0; i < inserted_count; i++) {
-        free(inserted_keys[i]);
-    }
-    free(inserted_keys);
     delete(map1);
     return 0;
 }

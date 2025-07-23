@@ -6,6 +6,8 @@ These are some performance metrics which should of course always be taken with a
 
 To see an example of how to use the library look at the profiling.c file.
 
+These tables are all a scam, I have no idea how to benchmark things. Just try it yourself its actually really fast.
+
 Metric          | Value
 ----------------|----------------
 Keys/Values     | 100,000
@@ -16,11 +18,14 @@ vals array      | 2,097,152 bytes
 total           | 3,276,864 bytes
 Overhead (struct+ctrl) | 4.00 %
 
-| Operation | SwissMap (ns) | [Abseil](https://github.com/abseil/abseil-cpp) (ns) | [Boost](https://github.com/boostorg/boost) (ns) | [stb_ds](https://github.com/nothings/stb/blob/master/stb_ds.h) (ns) | [CC](https://github.com/JacksonAllan/CC) (ns) | [ska_flat_map](https://github.com/skarupke/flat_hash_map/blob/master/flat_hash_map.hpp) (ns) | [cwisstable](https://github.com/google/cwisstable) (ns) | [libc/search.h] (ns) |
-|---------|--------|---------|---------|-----------|------------|---------|---------|-------|
-| Insert  | 675.84 | 2559.48 | 423.893 | 976.69    | 957.21     | 445.834 | 996.426 | 934.7 |
-| Lookup  | 663.13 | 575.484 | 91.8559 | 821.06    | 720.19     | 64.223  | 958.281 | 703.6 |
-| Iterate | 589.76 | 73.6445 | 30.3343 | 27,985.10 | 363,763.89 | 9.54452 | N/A     | 1.951 |
-| Delete  | 643.72 | 812.926 | 146.817 | 1,030.30  | 778.00     | 71.8897 | 947.221 | 690.7 |
+| Operation | SwissMap (ns) | [Abseil](https://github.com/abseil/abseil-cpp) (ns) | [Boost](https://github.com/boostorg/boost) (ns) | [stb_ds](https://github.com/nothings/stb/blob/master/stb_ds.h) (ns) | [CC](https://github.com/JacksonAllan/CC) (ns) | [ska_flat_map](https://github.com/skarupke/flat_hash_map/blob/master/flat_hash_map.hpp) (ns) |
+|---------|--------|---------|---------|-----------|------------|---------|
+| Insert  | 876.86 | 2559.48 | 423.893 | 976.69    | 957.21     | 445.834 |
+| Lookup  | 663.13 | 575.484 | 91.8559 | 821.06    | 720.19     | 64.223  |
+| Iterate | 589.76 | 73.6445 | 30.3343 | 27,985.10 | 363,763.89 | 9.54452 |
+| Delete  | 643.72 | 812.926 | 146.817 | 1,030.30  | 778.00     | 71.8897 |
 
-I'm not sure if my testing of the C libraries is bad but they are getting some pretty hairy results.
+
+I tries doing simd but it seems as if the compiler figures that out for me even using a scalar approach.
+
+For stb and CC I think I may have done the iteration tests wrong but I can't seem to verify how/why.

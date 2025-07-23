@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-constexpr int NOPS = 1'000'000;
+constexpr int NOPS = 100000000;
 
 std::string random_string(size_t len) {
     static const char charset[] =
@@ -54,7 +54,6 @@ int main() {
             checksum += p.second.num;
         }
         volatile size_t sink = checksum;
-        break;
     });
 
     BENCHMARK("Delete", {
