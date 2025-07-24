@@ -66,9 +66,11 @@ int sm_delete(void *m, const void *key, uint64_t key_size, uint64_t val_size);
 #define erase(m, k)  m##_erase(k)
 #define delete(m)    m##_del()
 
-#define for_each(m, i)                                         \
-  for (uint64_t i = 0; i < m->cap; ++i)                        \
-    if (m->ctrl[i] != EMPTY && m->ctrl[i] != DELETED)
+#define for_each(m, k, v)                                                    \
+    for (uint8_t* _ctrl = (m)->ctrl, *_end = _ctrl + (m)->cap; _ctrl < _end; ++_ctrl)                                                           \
+        if (!(*_ctrl & 0x80))                                                  \
+            for (__typeof__(*(m)->vals)* v = (m)->vals + (_ctrl - (m)->ctrl); v; v = NULL) \
+                for (__typeof__(*(m)->keys)* k = (m)->keys + (_ctrl - (m)->ctrl); k; k = NULL)
 
 #define EMPTY      0x80u
 #define DELETED    0xFEu

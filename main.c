@@ -1,7 +1,6 @@
 #include <stdio.h>
-#define SWISSMAP_IMPLEMENTATION
-#include "hash.h"
 #include <assert.h>
+#include "hash.h"
 
 typedef struct {
     int a;
@@ -16,7 +15,7 @@ map(map, char*, type, (sm_allocator_t){0});
 
 int main() {
     type a = {
-        .a = 1,
+        .a = 10,
         .b = 1.0,
         .e = {
             .c = 1,
@@ -30,6 +29,7 @@ int main() {
     assert(c->a == a.a);
     erase(map, b);
     type* d = get(map, b);
+    // See hash.c:229
     // assert(d->a != a.a);
     delete(map);
 }

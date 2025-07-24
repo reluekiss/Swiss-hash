@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
@@ -7,10 +8,9 @@
 
 #include "xxhash3.h"
 
-#define NOPS 1000000
 #define STEPS 10
 
-#define DA_INIT_CAP 16
+#define DA_INIT_CAP 2048
 
 #define da_append(da, ...)                                                     \
   do {                                                                          \
@@ -26,10 +26,6 @@
     (da)->items[(da)->count++] = (__VA_ARGS__);                                \
   } while (0)
 
-typedef struct {
-    int num;
-    char* string;
-} my_type_t;
 
 typedef struct {
     char **items;
@@ -37,7 +33,7 @@ typedef struct {
 } da_charp_t;
 
 typedef struct {
-    my_type_t *items;
+    uint32_t *items;
     uint64_t count, capacity;
 } da_val_t;
 
@@ -62,18 +58,15 @@ sm_allocator_t newhash(sm_allocator_t a) {
     a.hash = XXH3_64bits;
     return a;
 }
-map(map1, char*, my_type_t, newhash(sm_mmap_allocator()));
+map(map1, char*, uint32_t, newhash(sm_mmap_allocator()));
 
 static da_charp_t keys = {0};
 static da_val_t vals = {0};
 
-static void prepare_data(void) {
-    for (int i = 0; i < NOPS; i++) {
-        da_append(&keys, random_string(10));
-        da_append(&vals, (my_type_t){
-            .num    = rand(),
-            .string = random_string(1015),
-        });
+static void prepare_data(int nops) {
+    for (int i = 0; i < nops; i++) {
+        da_append(&keys, random_string(1024));
+        da_append(&vals, i);
     }
 }
 
@@ -83,14 +76,15 @@ static long ns_diff(const struct timespec *a,
        + (b->tv_nsec - a->tv_nsec);
 }
 
-int main(void) {
+int main(int argc, char** argv) {
+    int nops = argc > 1 ? atoi(argv[1]) : 1000000; 
     srand((unsigned)time(NULL));
-    prepare_data();
+    prepare_data(nops);
   
-    uint64_t step = NOPS/STEPS;
+    uint64_t step = nops/STEPS;
     struct timespec t0, t1;
     clock_gettime(CLOCK_MONOTONIC, &t0);
-    for (int i = 0; i < NOPS; i++) {
+    for (int i = 0; i < nops; i++) {
         put(map1, keys.items[i], vals.items[i]);
         if ((i+1) % step == 0) {
             clock_gettime(CLOCK_MONOTONIC, &t1);
@@ -101,33 +95,35 @@ int main(void) {
   
     clock_gettime(CLOCK_MONOTONIC, &t0);
     uint32_t state = 123456789;
-    for (int i = 0; i < NOPS; i++) {
-        uint32_t r = xorshift32(&state) & (NOPS - 1);
-        (void)*get(map1, keys.items[r]);
+    for (int i = 0; i < nops; i++) {
+        uint32_t r = xorshift32(&state) & (nops - 1);
+        uint32_t* c = get(map1, keys.items[r]);
         if ((i+1) % step == 0) {
             clock_gettime(CLOCK_MONOTONIC, &t1);
             long ns = ns_diff(&t0, &t1);
             printf("Lookup avg @ %6u ops: %.2f ns/op\n", i+1, (double)ns/(i+1));
+            assert(*c == vals.items[r]);
         }
     }
 
     clock_gettime(CLOCK_MONOTONIC, &t0);
-    for (int i = 0; i < NOPS; i++) {
-        uint64_t checksum = 0;
-        for_each(map1, i) {
-            checksum += map1->vals[i].num;
+    int i;
+    uint64_t checksum = 0;
+    for (i = 0; i < nops; i++) {
+        for_each(map1, key, val) {
+            checksum += *val;
         }
-       volatile uint64_t sink = checksum;
-        if ((i+1) % 10000 == 0) {
-            clock_gettime(CLOCK_MONOTONIC, &t1);
-            long ns = ns_diff(&t0, &t1);
-            printf("Iterate avg @ %6u ops: %.2f ns/op\n", i+1, (double)ns/(i+1));
+        if ((i+1) % 1000 == 0) {
             break;
         }
+        volatile uint64_t sink = checksum = 0;
     }
+    clock_gettime(CLOCK_MONOTONIC, &t1);
+    long ns = ns_diff(&t0, &t1);
+    printf("Iterate avg @ %6u ops: %.2f ns/op, checksum: %ld\n", i+1, ((double)ns/(i+1)), checksum);
   
     clock_gettime(CLOCK_MONOTONIC, &t0);
-    for (int i = 0; i < NOPS; i++) {
+    for (int i = 0; i < nops; i++) {
       erase(map1, keys.items[i]);
         if ((i+1) % step == 0) {
             clock_gettime(CLOCK_MONOTONIC, &t1);

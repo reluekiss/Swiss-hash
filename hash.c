@@ -4,7 +4,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <immintrin.h>
 #include <sys/mman.h>
 
 #ifndef NULL
@@ -12,9 +11,19 @@
 #endif
 
 #ifdef __AVX2__
-#  define GROUP_SIZE 32
+#include <immintrin.h>
+#define GROUP_SIZE 32
 #else
-#  define GROUP_SIZE 8
+#include <emmintrin.h>
+#define GROUP_SIZE 8
+#endif
+
+#if __GNUC__ >= 3
+#define likely(x) __builtin_expect(!!(x), 1)
+#define unlikely(x) __builtin_expect(!!(x), 0)
+#else
+#define likely(x) (x)
+#define unlikely(x) (x)
 #endif
 
 typedef struct {
@@ -56,14 +65,14 @@ static void *mmap_alloc(void *ctx, uint64_t n) {
     uint64_t total = n + hdr;
     uint64_t region = (total + pagesz - 1) & ~(pagesz - 1);
     void *p = mmap(NULL, region, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-    if (p == MAP_FAILED) return NULL;
+    if (unlikely(p == MAP_FAILED)) return NULL;
     *(uint64_t*)p = region;
     return (char*)p + hdr;
 }
 
 static void mmap_free(void *ctx, void *ptr) {
     (void)ctx;
-    if (!ptr) return;
+    if (unlikely(!ptr)) return;
     char *base = (char*)ptr - sizeof(uint64_t);
     uint64_t region = *(uint64_t*)base;
     munmap(base, region);
@@ -142,10 +151,8 @@ static void sm_grow(swiss_map_generic_t *m, uint64_t key_size, uint64_t val_size
     m->ctrl = m->alloc.alloc(m->alloc.ctx, m->cap + GROUP_SIZE);
     memset(m->ctrl, EMPTY, m->cap + GROUP_SIZE);
     m->keys = m->alloc.alloc(m->alloc.ctx, m->cap * key_size);
-    // memset(m->keys, 0, m->cap * key_size);
     m->vals = m->alloc.alloc(m->alloc.ctx, m->cap * val_size);
-    // memset(m->vals, 0, m->cap * val_size);
-    for (uint64_t i = 0; i < old_cap; i++) {
+    for (uint64_t i = 0; likely(i < old_cap); i++) {
         uint8_t c = old_ctrl[i];
         if (c != EMPTY && c != DELETED) {
             void *k_src = (char*)old_keys + i * key_size;
@@ -155,7 +162,7 @@ static void sm_grow(swiss_map_generic_t *m, uint64_t key_size, uint64_t val_size
             uint64_t idx = index_for(h, m->lgcap);
             for (;;idx = (idx + GROUP_SIZE) & (m->cap - 1)) {
                 uint32_t mask = match(EMPTY, &m->ctrl[idx]);
-                if (mask) {
+                if (likely(mask)) {
                     int j = __builtin_ctz(mask);
                     uint64_t pos = (idx + j) & (m->cap - 1);
                     m->ctrl[pos] = h2;
@@ -184,7 +191,7 @@ void *sm_get(void *map, const void *key, int *inserted, uint64_t key_size, uint6
         uint8_t *ctrl = m->ctrl + idx;
         __builtin_prefetch(ctrl + GROUP_SIZE, 0, 1);
         uint32_t mask = match(h2, ctrl) | match(EMPTY, ctrl) | match(DELETED, ctrl);
-        while (mask) {
+        while (likely(mask)) {
             int j = __builtin_ctz(mask);
             uint64_t pos = (idx + j) & (m->cap-1);
             mask &= mask - 1;
@@ -211,9 +218,9 @@ int sm_delete(void *map, const void *key, uint64_t key_size, uint64_t val_size) 
     uint8_t h2 = ((uint8_t)(h >> 56)) & 0x7F;
     uint64_t idx = index_for(h, m->lgcap);
     for (;;) {
-        uint32_t match_mask = match(h2, &m->ctrl[idx]);
-        while (match_mask) {
-            int j = __builtin_ctz(match_mask);
+        uint32_t mask = match(h2, &m->ctrl[idx]);
+        while (unlikely(mask)) {
+            int j = __builtin_ctz(mask);
             uint64_t pos = (idx + j) & (m->cap - 1);
             if (memcmp((char*)m->keys + pos*key_size, key, key_size) == 0) {
                 m->ctrl[pos] = DELETED;
@@ -224,7 +231,7 @@ int sm_delete(void *map, const void *key, uint64_t key_size, uint64_t val_size) 
                 m->size--;
                 return 0;
             }
-            match_mask &= match_mask - 1;
+            mask &= mask - 1;
         }
         if (match(EMPTY, &m->ctrl[idx])) return -1;
         idx = (idx + GROUP_SIZE) & (m->cap - 1);

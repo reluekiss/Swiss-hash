@@ -35,6 +35,11 @@ static void random_cstr(char *buf, size_t len, std::mt19937_64 &rng) {
   }
   buf[len] = '\0';
 }
+template<class T>
+__attribute__((noinline))
+void doNotOptimizeAway(const T &value) {
+  asm volatile("" : : "g"(value) : "memory");
+}
 
 int main() {
   constexpr int NOPS = 1'000'000;
@@ -88,14 +93,15 @@ int main() {
   {
     auto t0 = std::chrono::high_resolution_clock::now();
     size_t checksum = 0;
-    for (auto &p : m) {
-      checksum += p.second.num;
+    for (int i = 0; i < NOPS; ++i) {
+        for (auto &p : m) {
+          checksum += p.second.num;
+        }
+        if (i % 1000 == 0) break;
     }
-    (void)checksum;
     auto t1 = std::chrono::high_resolution_clock::now();
-    double avg =
-      std::chrono::duration<double, std::nano>(t1 - t0).count() / m.size();
-    std::cout << "Iterate avg: " << avg << " ns/op\n";
+    double avg = std::chrono::duration<double, std::nano>(t1 - t0).count() / 1000;
+    std::cout << "Iterate avg: " << avg << " ns/op, checksum: " << checksum << "\n";
   }
 
   // Delete
