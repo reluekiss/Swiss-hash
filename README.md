@@ -19,10 +19,10 @@ I did my testing with reserved maps, but you should know that spiking behaviour 
 8 byte int key, 8 byte int value, with reserved maps. 1,000,000 entries
 | Operation | swissmap (ns/op) | [Boost](https://github.com/boostorg/boost) (ns/op) | [ska_flat_map](https://github.com/skarupke/flat_hash_map/blob/master/flat_hash_map.hpp) (ns/op) |
 |-----------|--------:|---------:|---------:|
-| Insert    | 126.19  | 38.54    | 107.86   |
-| Lookup    | 82.09   | 26.29    | 42.97    |
+| Insert    | 126.19  |  107.86   | 38.54    |
+| Lookup    | 82.09   |  42.97    |26.29    |
 | Iterate   | 5.128352e+06 | 5.83025e+06 | 1.69832e+07 |
-| Delete    | 56.58   | 25.66    | 144.45   |
+| Delete    | 56.58   |  144.45   |25.66    |
 
 Memory Footprint (1 000 000 entries)
 All numbers in MiB (1 MiB = 1024 KiB)
