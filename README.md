@@ -19,25 +19,25 @@ These results were gotten on a machine using a AMD Ryzen 5 5600G and 40GB DDR4 3
 
 | Impl | Mean (ns) | Std (ns) |
 | --- | --- | --- |
-| boost | 1353.78 | 1009.30 |
-| ska | 593.02 | 212.14 |
-| swiss | 1609.57 | 1615.63 |
+| boost | 1310.38 | 1010.18 |
+| ska | 601.63 | 225.89 |
+| swiss | 1576.61 | 1600.70 |
 
 ### Operation: Lookup
 
 | Impl | Mean (ns) | Std (ns) |
 | --- | --- | --- |
-| boost | 974.41 | 215.79 |
-| ska | 855.14 | 172.57 |
-| swiss | 692.37 | 145.65 |
+| boost | 993.43 | 214.97 |
+| ska | 853.60 | 175.93 |
+| swiss | 614.00 | 130.79 |
 
 ### Operation: Delete
 
 | Impl | Mean (ns) | Std (ns) |
 | --- | --- | --- |
-| boost | 921.31 | 315.95 |
-| ska | 792.62 | 203.88 |
-| swiss | 560.28 | 194.91 |
+| boost | 968.98 | 328.13 |
+| ska | 791.43 | 207.18 |
+| swiss | 500.36 | 183.18 |
 
 ## Group `8`: 8 byte key / 8 byte value
 
@@ -45,25 +45,25 @@ These results were gotten on a machine using a AMD Ryzen 5 5600G and 40GB DDR4 3
 
 | Impl | Mean (ns) | Std (ns) |
 | --- | --- | --- |
-| boost | 107.52 | 81.78 |
-| ska | 116.47 | 50.67 |
-| swiss | 74.89 | 49.82 |
+| boost | 111.31 | 82.53 |
+| ska | 124.15 | 60.22 |
+| swiss | 71.12 | 46.52 |
 
 ### Operation: Lookup
 
 | Impl | Mean (ns) | Std (ns) |
 | --- | --- | --- |
-| boost | 298.75 | 122.53 |
-| ska | 165.73 | 78.75 |
-| swiss | 180.59 | 86.12 |
+| boost | 298.09 | 125.05 |
+| ska | 165.45 | 76.53 |
+| swiss | 178.81 | 85.91 |
 
 ### Operation: Delete
 
 | Impl | Mean (ns) | Std (ns) |
 | --- | --- | --- |
-| boost | 275.25 | 132.49 |
-| ska | 175.30 | 80.35 |
-| swiss | 133.53 | 84.00 |
+| boost | 275.53 | 135.87 |
+| ska | 176.67 | 79.73 |
+| swiss | 144.70 | 91.90 |
 
 ## Group `r`: random 1024 byte key / 1032 byte value
 
@@ -71,25 +71,25 @@ These results were gotten on a machine using a AMD Ryzen 5 5600G and 40GB DDR4 3
 
 | Impl | Mean (ns) | Std (ns) |
 | --- | --- | --- |
-| boost | 151.50 | 5.56 |
-| ska | 148.85 | 5.69 |
-| swiss | 93.87 | 8.04 |
+| boost | 151.24 | 5.24 |
+| ska | 149.04 | 6.05 |
+| swiss | 90.33 | 4.32 |
 
 ### Operation: Lookup
 
 | Impl | Mean (ns) | Std (ns) |
 | --- | --- | --- |
-| boost | 595.95 | 135.01 |
-| ska | 706.69 | 140.20 |
-| swiss | 1760.33 | 1180.95 |
+| boost | 607.47 | 139.04 |
+| ska | 702.63 | 143.09 |
+| swiss | 376.48 | 107.42 |
 
 ### Operation: Delete
 
 | Impl | Mean (ns) | Std (ns) |
 | --- | --- | --- |
-| boost | 597.83 | 140.18 |
-| ska | 708.62 | 139.55 |
-| swiss | 427.55 | 112.18 |
+| boost | 606.22 | 138.47 |
+| ska | 705.16 | 143.53 |
+| swiss | 372.73 | 107.50 |
 
 ## Group `r8`: random 8 byte key / 8 byte value
 
@@ -97,22 +97,22 @@ These results were gotten on a machine using a AMD Ryzen 5 5600G and 40GB DDR4 3
 
 | Impl | Mean (ns) | Std (ns) |
 | --- | --- | --- |
-| boost | 22.01 | 3.98 |
-| ska | 21.22 | 3.23 |
-| swiss | 30.55 | 3.06 |
+| boost | 21.98 | 3.97 |
+| ska | 21.24 | 3.25 |
+| swiss | 30.06 | 3.46 |
 
 ### Operation: Lookup
 
 | Impl | Mean (ns) | Std (ns) |
 | --- | --- | --- |
-| boost | 199.13 | 86.49 |
-| ska | 226.83 | 75.56 |
-| swiss | 273.42 | 88.97 |
+| boost | 200.37 | 84.16 |
+| ska | 231.44 | 76.81 |
+| swiss | 133.00 | 67.56 |
 
 ### Operation: Delete
 
 | Impl | Mean (ns) | Std (ns) |
 | --- | --- | --- |
-| boost | 199.90 | 87.20 |
-| ska | 227.91 | 77.26 |
-| swiss | 147.15 | 72.73 |
+| boost | 199.59 | 79.86 |
+| ska | 232.35 | 79.31 |
+| swiss | 128.70 | 64.24 |

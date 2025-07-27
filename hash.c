@@ -179,6 +179,27 @@ static void sm_grow(swiss_map_generic_t *m, uint64_t key_size, uint64_t val_size
     m->alloc.free(m->alloc.ctx, old_vals);
 }
 
+void *sm_find(void *map, const void *key, uint64_t key_size, uint64_t val_size) {
+    swiss_map_generic_t *m = (swiss_map_generic_t*)map;
+    uint64_t h = m->alloc.hash(key, key_size);
+    uint8_t h2 = ((uint8_t)(h >> 56)) & 0x7F;
+    uint64_t idx = index_for(h, m->lgcap);
+    
+    for (;;) {
+        uint32_t mask = match(h2, &m->ctrl[idx]);
+        while (mask) {
+            int j = __builtin_ctz(mask);
+            uint64_t pos = (idx + j) & (m->cap - 1);
+            if (memcmp((char*)m->keys + pos * key_size, key, key_size) == 0) {
+                return (char*)m->vals + pos * val_size;
+            }
+            mask &= mask - 1;
+        }
+        if (match(EMPTY, &m->ctrl[idx])) return NULL;
+        idx = (idx + GROUP_SIZE) & (m->cap - 1);
+    }
+}
+
 void *sm_get(void *map, const void *key, int *inserted, uint64_t key_size, uint64_t val_size) {
     swiss_map_generic_t *m = (swiss_map_generic_t*)map;
     if ((m->size + 1) * 5 >= m->cap * 4)

@@ -18,6 +18,7 @@ typedef struct {
 sm_allocator_t sm_mmap_allocator(void);
 void *sm_new(uint64_t init_cap, uint64_t key_size, uint64_t val_size, sm_allocator_t allocs);
 void sm_free(void *m, sm_allocator_t allocs);
+void *sm_find(void *m, const void *key, uint64_t key_size, uint64_t val_size);
 void *sm_get(void *m, const void *key, int *inserted, uint64_t key_size, uint64_t val_size);
 int sm_delete(void *m, const void *key, uint64_t key_size, uint64_t val_size);
 
@@ -38,13 +39,7 @@ int sm_delete(void *m, const void *key, uint64_t key_size, uint64_t val_size);
                                                                        \
     static inline val_t *m##_get(key_t k) {                            \
         if (!m) m##_init();                                              \
-        int _ins = 0;                                           \
-        val_t *_v = (val_t*)sm_get(m, &k, &_ins, sizeof(key_t), sizeof(val_t)); \
-        if (_ins) {                                             \
-          sm_delete(m, &k, sizeof(key_t), sizeof(val_t));      \
-          return NULL;                                          \
-        }                                                       \
-        return _v;                                               \
+        return (val_t*)sm_find(m, &k, sizeof(key_t), sizeof(val_t)); \
     }                                                                  \
                                                                        \
     static inline int m##_put(key_t k, val_t v) {                      \

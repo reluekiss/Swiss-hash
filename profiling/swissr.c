@@ -112,9 +112,7 @@ int main(int argc, char **argv) {
             break;
           case 1:
             clock_gettime(CLOCK_MONOTONIC, &t0);
-            {
-                my_val_t *v = get(map1, keys.items[lookup_idx[i]]);
-            }
+            my_val_t *v = get(map1, keys.items[lookup_idx[i]]);
             clock_gettime(CLOCK_MONOTONIC, &t1);
             if (i % 100 == 0) times_lkp[lkp_c++] = (entry) { .ins = ns_diff(&t0, &t1), .count = map1->size };
             break;
