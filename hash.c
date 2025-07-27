@@ -245,10 +245,6 @@ int sm_delete(void *map, const void *key, uint64_t key_size, uint64_t val_size) 
             uint64_t pos = (idx + j) & (m->cap - 1);
             if (memcmp((char*)m->keys + pos*key_size, key, key_size) == 0) {
                 m->ctrl[pos] = DELETED;
-                // This memset slows down deletions by about ~20% but it means
-                // that you cannot get values that are marked as deleted.
-                // Feel free to comment this out but be aware of funky behaviour.
-                // memset((char *)m->vals + pos * val_size, 0, val_size);
                 m->size--;
                 return 0;
             }

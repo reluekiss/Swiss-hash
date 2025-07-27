@@ -29,7 +29,7 @@ int main() {
     assert(c->a == a.a);
     erase(map, b);
     type* d = get(map, b);
-    // See hash.c:229
-    // assert(d->a != a.a);
+    // d is null on gets after erases of its key and as such causes a null
+    // dereference if you do d->a.
     delete(map);
 }
