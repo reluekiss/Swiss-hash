@@ -13,82 +13,106 @@ This is the ouput of running bench, the plotting and such uses numpy, pandas and
 
 These results were gotten on a machine using a AMD Ryzen 5 5600G and 40GB DDR4 3200 MHz. You will need about 24 GB because of the preprocessing on the large key values for ska takes up a lot of ram.
 
-Group 'nosuffix': 1024 byte key / 1032 byte value
+## Group `nosuffix`: 1024 byte key / 1032 byte value
 
-  Operation: Insert
- Impl Mean(ns) Std(ns)
-boost  1301.52 1011.63
-  ska   590.76  210.96
-swiss  1609.49 1636.63
+### Operation: Insert
 
-  Operation: Lookup
- Impl Mean(ns) Std(ns)
-boost   985.47  215.92
-  ska   847.72  172.73
-swiss   625.94  130.01
+| Impl | Mean (ns) | Std (ns) |
+| --- | --- | --- |
+| boost | 1353.78 | 1009.30 |
+| ska | 593.02 | 212.14 |
+| swiss | 1609.57 | 1615.63 |
 
-  Operation: Delete
- Impl Mean(ns) Std(ns)
-boost   963.82  327.74
-  ska   789.40  203.34
-swiss   490.18  177.60
+### Operation: Lookup
 
-Group '8': 8 byte key / 8 byte value
+| Impl | Mean (ns) | Std (ns) |
+| --- | --- | --- |
+| boost | 974.41 | 215.79 |
+| ska | 855.14 | 172.57 |
+| swiss | 692.37 | 145.65 |
 
-  Operation: Insert
- Impl Mean(ns) Std(ns)
-boost   111.44   86.27
-  ska   115.70   53.43
-swiss    75.67   49.46
+### Operation: Delete
 
-  Operation: Lookup
- Impl Mean(ns) Std(ns)
-boost   294.25  127.55
-  ska   159.68   72.98
-swiss   179.91   88.41
+| Impl | Mean (ns) | Std (ns) |
+| --- | --- | --- |
+| boost | 921.31 | 315.95 |
+| ska | 792.62 | 203.88 |
+| swiss | 560.28 | 194.91 |
 
-  Operation: Delete
- Impl Mean(ns) Std(ns)
-boost   272.18  137.35
-  ska   172.90   84.18
-swiss   141.14   87.33
+## Group `8`: 8 byte key / 8 byte value
 
-Group 'r': random 1024 byte key / 1032 byte value
+### Operation: Insert
 
-  Operation: Insert
- Impl Mean(ns) Std(ns)
-boost   151.55    4.88
-  ska   148.60    6.07
-swiss    94.33    8.64
+| Impl | Mean (ns) | Std (ns) |
+| --- | --- | --- |
+| boost | 107.52 | 81.78 |
+| ska | 116.47 | 50.67 |
+| swiss | 74.89 | 49.82 |
 
-  Operation: Lookup
- Impl Mean(ns) Std(ns)
-boost   605.40  139.28
-  ska   706.64  137.93
-swiss  1768.38 1166.62
+### Operation: Lookup
 
-  Operation: Delete
- Impl Mean(ns) Std(ns)
-boost   604.93  140.86
-  ska   711.49  141.94
-swiss   434.26  117.39
+| Impl | Mean (ns) | Std (ns) |
+| --- | --- | --- |
+| boost | 298.75 | 122.53 |
+| ska | 165.73 | 78.75 |
+| swiss | 180.59 | 86.12 |
 
-Group 'r8': random 8 byte key / 8 byte value
+### Operation: Delete
 
-  Operation: Insert
- Impl Mean(ns) Std(ns)
-boost    21.88    3.88
-  ska    21.22    3.26
-swiss    30.53    3.16
+| Impl | Mean (ns) | Std (ns) |
+| --- | --- | --- |
+| boost | 275.25 | 132.49 |
+| ska | 175.30 | 80.35 |
+| swiss | 133.53 | 84.00 |
 
-  Operation: Lookup
- Impl Mean(ns) Std(ns)
-boost   198.61   85.52
-  ska   230.34   79.58
-swiss   270.94   87.66
+## Group `r`: random 1024 byte key / 1032 byte value
 
-  Operation: Delete
- Impl Mean(ns) Std(ns)
-boost   198.64   84.71
-  ska   229.93   80.20
-swiss   142.21   63.99
+### Operation: Insert
+
+| Impl | Mean (ns) | Std (ns) |
+| --- | --- | --- |
+| boost | 151.50 | 5.56 |
+| ska | 148.85 | 5.69 |
+| swiss | 93.87 | 8.04 |
+
+### Operation: Lookup
+
+| Impl | Mean (ns) | Std (ns) |
+| --- | --- | --- |
+| boost | 595.95 | 135.01 |
+| ska | 706.69 | 140.20 |
+| swiss | 1760.33 | 1180.95 |
+
+### Operation: Delete
+
+| Impl | Mean (ns) | Std (ns) |
+| --- | --- | --- |
+| boost | 597.83 | 140.18 |
+| ska | 708.62 | 139.55 |
+| swiss | 427.55 | 112.18 |
+
+## Group `r8`: random 8 byte key / 8 byte value
+
+### Operation: Insert
+
+| Impl | Mean (ns) | Std (ns) |
+| --- | --- | --- |
+| boost | 22.01 | 3.98 |
+| ska | 21.22 | 3.23 |
+| swiss | 30.55 | 3.06 |
+
+### Operation: Lookup
+
+| Impl | Mean (ns) | Std (ns) |
+| --- | --- | --- |
+| boost | 199.13 | 86.49 |
+| ska | 226.83 | 75.56 |
+| swiss | 273.42 | 88.97 |
+
+### Operation: Delete
+
+| Impl | Mean (ns) | Std (ns) |
+| --- | --- | --- |
+| boost | 199.90 | 87.20 |
+| ska | 227.91 | 77.26 |
+| swiss | 147.15 | 72.73 |

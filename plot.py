@@ -52,10 +52,9 @@ for suffix, desc in groups.items():
         plt.savefig(out, dpi=300)
         plt.close()
 
-
 for suffix, desc in groups.items():
     grp_name = suffix or "nosuffix"
-    print(f"\nGroup '{grp_name}': {desc}")
+    print(f"## Group `{grp_name}`: {desc}\n")
 
     for op in operations:
         rows = []
@@ -63,21 +62,26 @@ for suffix, desc in groups.items():
             fn = os.path.join(data_dir, f"{impl}{suffix}.csv")
             if not os.path.exists(fn):
                 continue
-            df    = pd.read_csv(fn)
-            y_all = df[df['operation'] == op]['avg_ns'].to_numpy()
+            df_all = pd.read_csv(fn)
+            y_all  = df_all[df_all['operation'] == op]['avg_ns'].to_numpy()
             if y_all.size == 0:
                 continue
-            mu    = y_all.mean()
-            sigma = y_all.std()
-            y      = y_all[y_all <= mu + 4*sigma]
+            μ    = y_all.mean()
+            σ    = y_all.std()
+            y     = y_all[y_all <= μ + 4*σ]
             rows.append({
-                'Impl':     impl,
-                'Mean(ns)': f"{y.mean():.2f}",
-                'Std(ns)':  f"{y.std():.2f}"
+                "Impl":      impl,
+                "Mean (ns)": f"{y.mean():.2f}",
+                "Std (ns)":  f"{y.std():.2f}"
             })
 
         if not rows:
             continue
-        print(f"\n  Operation: {op}")
-        df_sum = pd.DataFrame(rows)
-        print(df_sum.to_string(index=False))
+
+        print(f"### Operation: {op}\n")
+        headers = ["Impl", "Mean (ns)", "Std (ns)"]
+        print("| " + " | ".join(headers) + " |")
+        print("| " + " | ".join("---" for _ in headers) + " |")
+        for row in rows:
+            print("| " + " | ".join(row[h] for h in headers) + " |")
+        print()
