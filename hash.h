@@ -38,8 +38,13 @@ int sm_delete(void *m, const void *key, uint64_t key_size, uint64_t val_size);
                                                                        \
     static inline val_t *m##_get(key_t k) {                            \
         if (!m) m##_init();                                              \
-        int ins;                                                         \
-        return (val_t*)sm_get(m, &k, &ins, sizeof(key_t), sizeof(val_t));\
+        int _ins = 0;                                           \
+        val_t *_v = (val_t*)sm_get(m, &k, &_ins, sizeof(key_t), sizeof(val_t)); \
+        if (_ins) {                                             \
+          sm_delete(m, &k, sizeof(key_t), sizeof(val_t));      \
+          return NULL;                                          \
+        }                                                       \
+        return _v;                                               \
     }                                                                  \
                                                                        \
     static inline int m##_put(key_t k, val_t v) {                      \

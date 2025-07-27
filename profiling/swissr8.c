@@ -1,14 +1,15 @@
 #include <assert.h>
 #include <stdint.h>
-#include <stdlib.h>
 #include <stdio.h>
-#include <time.h>
-#include <unistd.h>
+#include <stdlib.h>
 #include <sys/mman.h>
+#include <sys/unistd.h>
+#include <time.h>
+
 #include "../hash.h"
 #include "../xxhash3.h"
 
-#define NOPS 1000000
+#define NOPS 3000000
 
 static uint64_t xorshift64star_state = 88172645463325252ull;
 uint64_t xor64_rand(void) {
@@ -21,30 +22,31 @@ uint64_t xor64_rand(void) {
 }
 
 sm_allocator_t newhash(sm_allocator_t a) {
-  a.hash = XXH3_64bits;
-  return a;
+    a.hash = XXH3_64bits;
+    return a;
 }
-
 map(map1, uint64_t, uint64_t, newhash(sm_mmap_allocator()));
 
-static long ns_diff(const struct timespec* a,
-                    const struct timespec* b) {
-  return (b->tv_sec - a->tv_sec) * 1000000000L +
-         (b->tv_nsec - a->tv_nsec);
+static long ns_diff(const struct timespec *a,
+                    const struct timespec *b) {
+    return (b->tv_sec - a->tv_sec)*1000000000L
+         + (b->tv_nsec - a->tv_nsec);
 }
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
     int nops = argc > 1 ? atoi(argv[1]) : NOPS;
     uint64_t* keys = malloc(sizeof(uint64_t) * nops);
     uint64_t* vals = malloc(sizeof(uint64_t) * nops);
     uint64_t* lookup = malloc(sizeof(uint32_t) * nops);
     uint64_t* delidx = malloc(sizeof(uint32_t) * nops);
+    uint8_t *ops = malloc(nops);
 
     for (int i = 0; i < nops; ++i) {
         keys[i] = xor64_rand();
         vals[i] = xor64_rand();
         lookup[i] = xor64_rand() % nops;
         delidx[i] = xor64_rand() % nops;
+        ops[i] = xor64_rand() % 3;
     }
 
     typedef struct { long ins; long count; } entry;
@@ -57,25 +59,29 @@ int main(int argc, char** argv) {
     map1 = (map1_t *)sm_new(nops, sizeof(uint64_t), sizeof(uint64_t), newhash(sm_mmap_allocator()));
     struct timespec t0, t1;
 
-    for (int i = 0; i < nops; ++i) {
-        clock_gettime(CLOCK_MONOTONIC, &t0);
-        put(map1, keys[i], vals[i]);
-        clock_gettime(CLOCK_MONOTONIC, &t1);
-        if (i % 100 == 0) times_ins[ins_c++] = (entry) { .ins = ns_diff(&t0, &t1), .count = map1->size };
-    }
-
-    for (int i = 0; i < nops; ++i) {
-        clock_gettime(CLOCK_MONOTONIC, &t0);
-        (void)*get(map1, keys[lookup[i]]);
-        clock_gettime(CLOCK_MONOTONIC, &t1);
-        if (i % 100 == 0) times_lkp[lkp_c++] = (entry) { .ins = ns_diff(&t0, &t1), .count = map1->size };
-    }
-
-    for (int i = 0; i < nops; ++i) {
-        clock_gettime(CLOCK_MONOTONIC, &t0);
-        erase(map1, keys[delidx[i]]);
-        clock_gettime(CLOCK_MONOTONIC, &t1);
-        if (i % 100 == 0) times_del[del_c++] = (entry) { .ins = ns_diff(&t0, &t1), .count = map1->size };
+    for (int i = 0; i < nops; i++) {
+        switch (ops[i]) {
+          case 0:
+            clock_gettime(CLOCK_MONOTONIC, &t0);
+            put(map1, keys[ins_c], vals[ins_c]);
+            clock_gettime(CLOCK_MONOTONIC, &t1);
+            if (i % 100 == 0) times_ins[ins_c++] = (entry) { .ins = ns_diff(&t0, &t1), .count = map1->size };
+            break;
+          case 1:
+            clock_gettime(CLOCK_MONOTONIC, &t0);
+            {
+                uint64_t *v = get(map1, keys[lookup[i]]);
+            }
+            clock_gettime(CLOCK_MONOTONIC, &t1);
+            if (i % 100 == 0) times_lkp[lkp_c++] = (entry) { .ins = ns_diff(&t0, &t1), .count = map1->size };
+            break;
+          case 2:
+            clock_gettime(CLOCK_MONOTONIC, &t0);
+            erase(map1, keys[delidx[i]]);
+            clock_gettime(CLOCK_MONOTONIC, &t1);
+            if (i % 100 == 0) times_del[del_c++] = (entry) { .ins = ns_diff(&t0, &t1), .count = map1->size };
+            break;
+        }
     }
 
     printf("operation,avg_ns,count\n");
@@ -86,6 +92,5 @@ int main(int argc, char** argv) {
     for (int i = 0; i < del_c; i++)
         printf("Delete,%lu,%lu\n", times_del[i].ins, times_del[i].count);
 
-    delete(map1);
     return 0;
 }

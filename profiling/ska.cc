@@ -26,6 +26,11 @@ struct KeyHash {
   }
 };
 
+struct Entry {
+    long data;
+    long unsigned count;
+};
+
 template <class T>
 __attribute__((noinline)) void doNotOptimizeAway(const T &v) {
   asm volatile("" ::"g"(v) : "memory");
@@ -61,71 +66,46 @@ int main() {
   
     ska::flat_hash_map<Key, Value, KeyHash> m;
     m.reserve(NOPS);
-  
+
+    std::vector<Entry> times_ins(NOPS), times_lkp(NOPS), times_del(NOPS);
+
+    int ins_c = 0, lkp_c = 0, del_c = 0;
+
     {
-      auto t0 = std::chrono::high_resolution_clock::now();
-      for (int i = 0; i < NOPS; i++) {
+      for (int i = 0; i < NOPS; ++i) {
+            auto t0 = std::chrono::high_resolution_clock::now();
           m.emplace(keys[i], vals[i]);
+            auto t1 = std::chrono::high_resolution_clock::now();
+            if (i % 100 == 0) times_ins[ins_c++] = (Entry) { .data = std::chrono::duration<long, std::nano>(t1 - t0).count(), .count = m.size() };
       }
-      auto t1 = std::chrono::high_resolution_clock::now();
-      double avg = std::chrono::duration<double, std::nano>(t1 - t0).count() / NOPS;
-      std::cout << "Insert avg: " << avg << " ns/op\n";
     }
   
     {
-      auto t0 = std::chrono::high_resolution_clock::now();
-      for (int i = 0; i < NOPS; i++) {
-          auto &v = m.find(keys[lookup_idx[i]])->second;
+      for (int i = 0; i < NOPS; ++i) {
+          auto t0 = std::chrono::high_resolution_clock::now();
+          auto& v = m.find(keys[lookup_idx[i]])->second;
           doNotOptimizeAway(v);
+          auto t1 = std::chrono::high_resolution_clock::now();
+          if (i % 100 == 0) times_lkp[lkp_c++] = (Entry) { .data = std::chrono::duration<long, std::nano>(t1 - t0).count(), .count = m.size() };
       }
-      auto t1 = std::chrono::high_resolution_clock::now();
-      double avg = std::chrono::duration<double, std::nano>(t1 - t0).count() / NOPS;
-      std::cout << "Lookup avg: " << avg << " ns/op\n";
     }
   
     {
-      auto t0 = std::chrono::high_resolution_clock::now();
-      size_t checksum = 0;
-      for (int rep = 0; rep < ITERS; rep++) {
-          for (auto &p : m) {
-              checksum += p.second.num;
-          }
-      }
-      auto t1 = std::chrono::high_resolution_clock::now();
-      double avg = std::chrono::duration<double, std::nano>(t1 - t0).count() / ITERS;
-      std::cout << "Iterate avg: " << avg << " ns/op, checksum: " << checksum
-                << "\n";
-    }
-  
-    {
-      auto t0 = std::chrono::high_resolution_clock::now();
-      for (int i = 0; i < NOPS; i++) {
+      for (int i = 0; i < NOPS; ++i) {
+          auto t0 = std::chrono::high_resolution_clock::now();
           m.erase(keys[delete_idx[i]]);
+          auto t1 = std::chrono::high_resolution_clock::now();
+          if (i % 100 == 0) times_del[del_c++] = (Entry) { .data = std::chrono::duration<long, std::nano>(t1 - t0).count(), .count = m.size() };
       }
-      auto t1 = std::chrono::high_resolution_clock::now();
-      double avg = std::chrono::duration<double, std::nano>(t1 - t0).count() / NOPS;
-      std::cout << "Delete avg: " << avg << " ns/op\n";
     }
-    size_t buckets = m.bucket_count();
-    size_t sz = m.size();
-#ifdef __AVX2__
-    constexpr size_t grp = 16;
-#else
-    constexpr size_t grp = 8;
-#endif
-    size_t ctrl_bytes = buckets + grp;
-    size_t kv_bytes = buckets * (sizeof(Key) + sizeof(Value));
-    size_t total = ctrl_bytes + kv_bytes;
-    size_t used = sz * (sizeof(Key) + sizeof(Value));
-    size_t ovhd = total - used;
-    double pct = 100.0 * ovhd / total;
-    
-    std::cout << "flat_hash_map buckets=" << buckets << ", size=" << sz << "\n";
-    std::cout << " mem: ctrl=" << ctrl_bytes / 1024 << " KB, "
-              << "kv=" << kv_bytes / 1024 << " KB\n";
-    std::cout << " total=" << total / 1024 << " KB, "
-              << "used=" << used / 1024 << " KB, "
-              << "overhead=" << ovhd / 1024 << " KB (" << pct << "%)\n";
+  
+    std::cout << "operation,avg_ns,count\n";
+    for (int i = 0; i < ins_c; ++i)
+        std::cout << "Insert," << times_ins[i].data << "," << times_ins[i].count << "\n";
+    for (int i = 0; i < lkp_c; ++i)
+        std::cout << "Lookup," << times_lkp[i].data << "," << times_lkp[i].count << "\n";
+    for (int i = 0; i < del_c; ++i)
+        std::cout << "Delete," << times_del[i].data << "," << times_del[i].count << "\n";
 
   return 0;
 }

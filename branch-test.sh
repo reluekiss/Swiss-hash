@@ -2,7 +2,7 @@
 set -x
 rm -rf .temp 
 mkdir -p .temp 
-cp *.c *.h profiling/profiling.c .temp
+cp *.c *.h profiling/swiss.c .temp
 cd .temp
 cc -fprofile-arcs -ftest-coverage -Wall -Wextra -march=native -D__AVX2__ -O5 xxhash3.c hash.c swiss.c -o profile
 ./profile
